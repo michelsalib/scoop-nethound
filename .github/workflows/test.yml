@@ -17,14 +17,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # the manifest from this checkout, with Scoop's own installer (the runner is an administrator)
+      # every manifest from this checkout, with Scoop's own installer (the runner is an administrator)
       - name: scoop install
         shell: pwsh
         run: |
           Invoke-Expression "& {$(Invoke-RestMethod https://get.scoop.sh)} -RunAsAdmin"
           $env:Path = "$env:USERPROFILE\scoop\shims;$env:Path"
-          scoop install .\bucket\netbeagle.json
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          netbeagle --version
-          netbeagle list
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          foreach ($manifest in Get-ChildItem bucket\*.json) {
+            scoop install $manifest.FullName
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+            & $manifest.BaseName --version
+            & $manifest.BaseName list
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
